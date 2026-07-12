@@ -76,6 +76,8 @@ export interface AnthropicProviderConfig {
   apiKey: string;
   /** Vendor/provider name (e.g., "anthropic-anima") */
   name: string;
+  /** Base URL (optional, defaults to api.anthropic.com) */
+  baseURL?: string;
   /** Model patterns this provider serves (e.g., ["claude-3-opus-20240229"]) */
   provides?: string[];
 }
@@ -533,6 +535,7 @@ export function createMembrane(config: MembraneFactoryConfig): Membrane {
       try {
         const anthropicAdapter = new AnthropicAdapter({
           apiKey: providerConfig.apiKey,
+          baseURL: providerConfig.baseURL,
         });
         adapters.set(adapterKey, anthropicAdapter);
 
@@ -548,6 +551,7 @@ export function createMembrane(config: MembraneFactoryConfig): Membrane {
           name: providerConfig.name,
           adapterKey,
           isDefault,
+          baseURL: providerConfig.baseURL ?? 'default',
           patterns: providerConfig.provides ?? [],
         }, 'Membrane: Anthropic adapter initialized');
       } catch (error) {
@@ -996,6 +1000,7 @@ export function createMembraneFromVendorConfigs(
       if (config?.anthropic_api_key) {
         anthropicProviders.push({
           apiKey: config.anthropic_api_key,
+          baseURL: config?.api_base,
           name: vendorName,
           provides: vendorConfig.provides,
         });
