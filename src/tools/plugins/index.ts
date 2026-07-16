@@ -14,6 +14,7 @@ import mcpResourcesPlugin from './mcp-resources.js'
 import timerPlugin from './timer.js'
 import characterPlugin from './character.js'
 import sleepPlugin from './sleep.js'
+import memoryPlugin from './memory.js'
 
 // Register all available plugins
 export const availablePlugins: Record<string, ToolPlugin> = {
@@ -26,6 +27,7 @@ export const availablePlugins: Record<string, ToolPlugin> = {
   'timer': timerPlugin,
   'character': characterPlugin,
   'sleep': sleepPlugin,
+  'memory': memoryPlugin,
 }
 
 export * from './types.js'

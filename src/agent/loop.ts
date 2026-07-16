@@ -1867,6 +1867,27 @@ export class AgentLoop {
                   _recentMessages: recentMsgs.map((m: any) => `${m.author?.username || 'unknown'}: ${m.content || ''}`),
                 }
               }
+              // Memory plugin gets structured recent messages (author ids, bot
+              // flags) so it can gate on who triggered the turn and report the
+              // exchange for saving with real message ids.
+              if (pluginName === 'memory' && pluginInstanceConfig) {
+                const recentCount = pluginInstanceConfig.recent_messages || 30
+                const recentMsgs = discordContext.messages.slice(-recentCount)
+                pluginInstanceConfig = {
+                  ...pluginInstanceConfig,
+                  _botUserId: this.botUserId,
+                  _recentMessagesRaw: recentMsgs.map((m: any) => ({
+                    id: m.id,
+                    authorId: m.author?.id,
+                    authorName: m.author?.displayName || m.author?.username,
+                    isBot: !!m.author?.bot,
+                    content: m.content || '',
+                    ts: m.timestamp instanceof Date ? m.timestamp.getTime() : Date.now(),
+                    channelId: m.channelId,
+                    guildId: m.guildId,
+                  })),
+                }
+              }
               
               // Skip disabled plugins (state_scope: 'off')
               if (pluginInstanceConfig?.state_scope === 'off') {
