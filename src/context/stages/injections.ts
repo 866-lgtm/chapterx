@@ -246,6 +246,33 @@ export function injectActivationCompletions(
 }
 
 /**
+ * Build the text appended to the system prompt from position:'system'
+ * injections. Ordered by priority (higher first), text blocks only.
+ */
+export function buildSystemInjectionText(injections: ContextInjection[]): string {
+  const parts = [...injections]
+    .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+    .map(injection => {
+      if (typeof injection.content === 'string') return injection.content
+      return injection.content
+        .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+        .map(b => b.text)
+        .join('\n')
+    })
+    .map(text => text.trim())
+    .filter(text => text.length > 0)
+
+  if (parts.length === 0) return ''
+
+  logger.debug({
+    injectionIds: injections.map(i => i.id),
+    totalLength: parts.reduce((n, p) => n + p.length, 0),
+  }, 'Built system-position plugin injections')
+
+  return parts.join('\n\n')
+}
+
+/**
  * Insert plugin context injections at calculated depths.
  *
  * Depth 0 = after the most recent message

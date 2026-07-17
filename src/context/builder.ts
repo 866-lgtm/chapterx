@@ -40,6 +40,7 @@ import {
 import {
   injectActivationCompletions,
   insertPluginInjections,
+  buildSystemInjectionText,
 } from './stages/injections.js'
 import {
   applyLimits,
@@ -164,8 +165,16 @@ export class ContextBuilder {
     }
 
     // 6. Inject plugin context injections
+    // position:'system' injections go into the system prompt (built below);
+    // the rest are spliced into the transcript at their target depth.
+    let systemInjectionText = ''
     if (pluginInjections && pluginInjections.length > 0) {
-      insertPluginInjections(participantMessages, pluginInjections, messages)
+      const systemInjections = pluginInjections.filter(i => i.position === 'system')
+      const transcriptInjections = pluginInjections.filter(i => i.position !== 'system')
+      if (transcriptInjections.length > 0) {
+        insertPluginInjections(participantMessages, transcriptInjections, messages)
+      }
+      systemInjectionText = buildSystemInjectionText(systemInjections)
     }
 
     // 6b. Re-attach persisted native thinking blocks (with signatures) to the
@@ -212,9 +221,13 @@ export class ContextBuilder {
     const stop_sequences = buildStopSequences(participantMessages, config)
     logger.debug({ stop_sequences, participantCount: participantMessages.length }, 'Built stop sequences')
 
+    const systemPrompt = systemInjectionText
+      ? (config.system_prompt ? `${config.system_prompt}\n\n${systemInjectionText}` : systemInjectionText)
+      : config.system_prompt
+
     const request: LLMRequest = {
       messages: participantMessages,
-      system_prompt: config.system_prompt,
+      system_prompt: systemPrompt,
       context_prefix: config.context_prefix,
       prefill_user_message: config.prefill_user_message,
       config: extractModelConfig(config),

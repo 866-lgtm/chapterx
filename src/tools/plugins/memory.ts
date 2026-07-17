@@ -10,6 +10,12 @@
  *   by one of the configured users (not on bot mentions, timers, or random
  *   activations). The injected block is ephemeral — rebuilt per activation,
  *   never part of channel history.
+ * - The block is appended to the system prompt (position: 'system').
+ *   Position history: it started in-transcript near the user's turn, but a
+ *   block glued to the triggering message gets current-turn salience — the
+ *   model reads it as something the user pasted instead of ambient memory
+ *   (same fix as the connectome-host MemoryModule). System placement costs
+ *   prompt-cache prefix on injected turns; clarity won.
  * - On those same turns, reports the user's and the bot's own recent channel
  *   messages to the service for saving. The service dedups by message id and
  *   buffers into ST-compatible chunks, so re-sending is harmless.
@@ -19,7 +25,8 @@
  *   user_ids: ['7055...']           # users whose turns trigger retrieval/saving
  *   service_url: http://127.0.0.1:3102
  *   recent_messages: 30             # window for exclusions + save reporting
- *   injection_depth: 2              # targetDepth of the injected block
+ *   injection_position: system      # 'system' (default) or 'transcript'
+ *   injection_depth: 2              # targetDepth when injection_position: transcript
  *   request_timeout_ms: 3500
  *
  * The agent loop enriches the config with _recentMessagesRaw (structured
@@ -117,13 +124,21 @@ const memoryPlugin: ToolPlugin = {
 
       const formatted: string = typeof result.formatted === 'string' ? result.formatted : ''
       const injections: ContextInjection[] = formatted
-        ? [{
-            id: `memory-${context.currentMessageId}`,
-            content: formatted,
-            targetDepth: config.injection_depth ?? 2,
-            priority: 20,
-            asSystem: true,
-          }]
+        ? [config.injection_position === 'transcript'
+            ? {
+                id: `memory-${context.currentMessageId}`,
+                content: formatted,
+                targetDepth: config.injection_depth ?? 2,
+                priority: 20,
+                asSystem: true,
+              }
+            : {
+                id: `memory-${context.currentMessageId}`,
+                content: formatted,
+                position: 'system',
+                targetDepth: 0,
+                priority: 20,
+              }]
         : []
 
       turnCache.set(cacheKey, injections)

@@ -2007,6 +2007,48 @@ describe('plugin injections (full pipeline)', () => {
     const hasPlugin = result.request.messages.some(m => textOf(m).includes('PLUGIN_MARKER'))
     expect(hasPlugin).toBe(true)
   })
+
+  it('position:system injection is appended to system prompt, not transcript', async () => {
+    const messages = Array.from({ length: 5 }, (_, i) =>
+      makeDiscordMessage({ id: `m${i}`, content: `message ${i}` })
+    )
+    const config = makeConfig({ system_prompt: 'You are a helpful bot.' })
+    const injections: ContextInjection[] = [
+      makeContextInjection({ content: '[Past chat memories]\nMEMORY_MARKER', position: 'system' }),
+    ]
+
+    const result = await builder.buildContext({
+      discordContext: makeDiscordContext(messages),
+      toolCacheWithResults: [],
+      lastCacheMarker: null,
+      messagesSinceRoll: 0,
+      config,
+      pluginInjections: injections,
+    })
+
+    expect(result.request.system_prompt).toBe('You are a helpful bot.\n\n[Past chat memories]\nMEMORY_MARKER')
+    const inTranscript = result.request.messages.some(m => textOf(m).includes('MEMORY_MARKER'))
+    expect(inTranscript).toBe(false)
+  })
+
+  it('position:system injection becomes the system prompt when none configured', async () => {
+    const messages = [makeDiscordMessage({ id: 'm0', content: 'hello' })]
+    const config = makeConfig({ system_prompt: undefined })
+    const injections: ContextInjection[] = [
+      makeContextInjection({ content: 'MEMORY_ONLY', position: 'system' }),
+    ]
+
+    const result = await builder.buildContext({
+      discordContext: makeDiscordContext(messages),
+      toolCacheWithResults: [],
+      lastCacheMarker: null,
+      messagesSinceRoll: 0,
+      config,
+      pluginInjections: injections,
+    })
+
+    expect(result.request.system_prompt).toBe('MEMORY_ONLY')
+  })
 })
 
 // ============================================================================

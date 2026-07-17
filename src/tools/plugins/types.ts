@@ -159,13 +159,24 @@ export interface PluginStateContext extends PluginContext {
 export interface ContextInjection {
   /** Unique ID for this injection (used for deduplication) */
   id: string
-  
+
   /** Content to inject - can be text or content blocks */
   content: string | ContentBlock[]
-  
-  /** 
+
+  /**
+   * Where the injection is placed.
+   * - 'transcript' (default): inserted into the message transcript at targetDepth.
+   * - 'system': appended to the system prompt. targetDepth, lastModifiedAt and
+   *   asSystem are ignored; priority still orders multiple system injections.
+   *   Text content only — non-text blocks are dropped. Note: a changing system
+   *   block busts the prompt-cache prefix on turns where it differs.
+   */
+  position?: 'transcript' | 'system'
+
+  /**
    * Target depth from newest message (0 = most recent).
    * The injection ages toward this depth over time.
+   * Ignored when position is 'system'.
    */
   targetDepth: number
   
